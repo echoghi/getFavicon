@@ -18,7 +18,7 @@ setUrl = "https://www.github.com";
      if(rel.toLowerCase() == "icon" || rel.toLowerCase() == "shortcut icon"){
      favicons.push($(this).attr('href'));
    }
-   console.log("Retrieved " + favicons.length + "favicon(s) from " + setUrl);
     fs.writeFile('favicon.txt', "Favicon(s) from " + setUrl +": " + favicons);
    });
+   console.log("Retrieved " + favicons.length + " favicon(s) from " + setUrl);
 });
