@@ -1,59 +1,107 @@
-var app = require('express')(),
+var express = require('express'),
+app = express(),
 server = require('http').Server(app),
-io = require('socket.io')(server),
 request = require('request'),
 cheerio = require('cheerio'),
+bodyParser = require('body-parser'),
 fs = require('fs'),
+chalk = require('chalk'),
+site = '',
 favicons = [],
-setUrl = "https://www.github.com";
+setUrl = '',
+searchUrl = '';
 
+function fileSize(filename) {
+ var stats = fs.statSync(filename)
+ var fileSizeInBytes = stats["size"]
+ return fileSizeInBytes
+}
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
-server.listen(3000, function(){
-  console.log('listening on port 3000');
+app.get('/download', function(req, res){
+  var file = __dirname + '/img.ico';
+  console.log(chalk.green("client is accessing download..."));
+  res.download(file);
+  console.log(fileSize(file));
 });
 
-io.on('connection', function(socket){
-  console.log('a user connected');
-  socket.on('disconnect', function(){
-    console.log('user disconnected');
-  });
-  socket.on('search site', function(str){
-    console.log('User searched in the site: ' + str);
-    setUrl = str;
-    getFavicon();
-  });
+app.use(express.static(__dirname));
+
+app.post('/api/search', function(req, res){
+  searchUrl = req.body.url;
+  getFavicon();
+  res.send({'searchUrl': searchUrl});
 });
+
+server.listen(3000, function(){
+  console.log(chalk.blue('listening on port 3000'));
+});
+
+//download the .ico files
+var download = function(url, filename, callback){
+
+  request.head(url, function(err, res, body){
+    if(err){
+      console.log(chalk.red('Download Error:', err));
+    } else{
+      if((res.headers['content-type'].indexOf('text/html') === -1) && (res.headers['content-type'].indexOf('image/svg+xml') === -1)){
+      console.log(chalk.blue('ico image:'), chalk.green(res.request.uri.href));
+      console.log(chalk.blue('content-type:'), chalk.green(res.headers['content-type']));
+      console.log(chalk.blue('content-length:'), chalk.green(res.headers['content-length']));
+      request(url).pipe(fs.createWriteStream(filename)).on('close', callback);
+    }
+     }
+  });
+};
 
 function getFavicon(){
-  request(setUrl, function(error, response, head) {
+  // Check/Fix URL Formatting
+  searchUrl.indexOf('http') !== -1 ? (console.log(chalk.green('HTTP Check Passed')), setUrl = searchUrl) : (setUrl = 'http://www.'+ searchUrl,
+  console.log(chalk.green('HTTP(s) error fixed')));
+
+  request({url: setUrl, rejectUnauthorized: false}, function(error, response, head) {
    if(error) {
-    console.log("Error: " + error);
+    console.log(chalk.red("Request Error:", error));
   }
-  console.log("Status code: " + response.statusCode);
-  //Parse the <head> for .ico files
+  //Parse the <head> for icons
   var $ = cheerio.load(head);
    $('link').each(function(index){
      var rel = $(this).attr('rel');
-     if(rel.toLowerCase() == "icon" || rel.toLowerCase() == "shortcut icon"){
-     favicons.push($(this).attr('href'));
+     if(rel.toLowerCase() === "icon" || rel.toLowerCase() === "shortcut icon"){
+        site = $(this).attr('href');
+       //Check if the favicon file has a proper address format
+       if(site.indexOf('http') !== -1 || site.indexOf('https') !== -1){
+         console.log(chalk.green('URL is a valid ICO file'));
+       }
+       else if((site.indexOf('http') === -1 && site.indexOf('https') === -1) && (site.indexOf('//') !== -1)){
+         site = 'http:' + site;
+       }
+       else{
+         site = setUrl + site;
+         console.log(chalk.green('ICO path error fixed'));
+       }
 
-     //download the .ico files
-     var download = function(uri, filename, callback){
-       request.head(uri, function(err, res, body){
-         console.log('content-type:', res.headers['content-type']);
-         console.log('content-length:', res.headers['content-length']);
-         request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
-       });
-     };
-     download($(this).attr('href'), 'img.ico', function(){console.log("File downloaded to server")});
+     favicons.push(site);
+
+    if(site !== ''){
+    download(site, 'img.ico', function(){console.log("File downloaded to server")});
+    }
    }
-    fs.writeFile('favicon.txt', "Favicon(s) from " + setUrl +": " + favicons);
+    fs.writeFile('favicon.txt', "Favicon(s) from " + setUrl + ": " + favicons);
    });
-   console.log("Retrieved " + favicons.length + " favicon(s) from " + setUrl);
-   favicons = [];
+   // Check if any favicons were found in the html body.
+   // If not, set a download address where the main favicon can usually be found
+   favicons.length === 0 ? (site = setUrl+'/favicon.ico',favicons.push(site),
+   console.log(chalk.green("Retrieved", favicons.length, "favicon(s) from", setUrl)),
+   download(site, 'img.ico', function(){console.log("File downloaded to server")}),
+   fs.writeFile('favicon.txt', "Favicon(s) from " + setUrl + ": " + favicons),
+   favicons = []) : (console.log(chalk.green("Retrieved " + favicons.length + " favicon(s) from " + setUrl)),
+   favicons = []);
 });
 }
