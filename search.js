@@ -1,3 +1,11 @@
+$(document).ajaxStart(function(){
+  $('body').addClass(".loading");
+  $('.modal').css('display', 'block');
+}).ajaxStop(function(){
+  $('.modal').css('display', 'none');
+  $('body').removeClass(".loading");
+});
+
 $('.btn-shorten').on('click', function(){
   $.ajax({
     url: '/api/search',
