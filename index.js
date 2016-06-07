@@ -35,8 +35,8 @@ app.use(express.static(__dirname));
 
 app.post('/api/search', function(req, res){
   searchUrl = req.body.url;
-  setTimeout(function(){
   getFavicon();
+  setTimeout(function(){
   res.send({'searchUrl': searchUrl});
 }, 3000);
 });
@@ -70,6 +70,8 @@ function getFavicon(){
   request({url: setUrl, rejectUnauthorized: false}, function(error, response, head) {
    if(error) {
     console.log(chalk.red("Request Error:", error));
+    searchUrl = 'error';
+    return;
   }
   //Parse the <head> for icons
   var $ = cheerio.load(head);
