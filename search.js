@@ -19,7 +19,7 @@ $('.btn-shorten').on('click', function(){
           'Download main favicon from '+ data.searchUrl + '</a>';
 
       if(data.searchUrl === 'error'){
-        resultHTML = '<p class="result">No Favicon was found, please check the URL and try again.';
+        resultHTML = '<p class="result">No Favicon was found, please check the URL and try again.</p>';
       }
 console.log(data.searchUrl)
         $('#link').html(resultHTML);
