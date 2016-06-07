@@ -51,6 +51,8 @@ var download = function(url, filename, callback){
   request.head(url, function(err, res, body){
     if(err){
       console.log(chalk.red('Download Error:', err));
+      searchUrl = 'error';
+      return;
     } else{
       if((res.headers['content-type'].indexOf('text/html') === -1) && (res.headers['content-type'].indexOf('image/svg+xml') === -1)){
       console.log(chalk.blue('ico image:'), chalk.green(res.request.uri.href));
