@@ -89,7 +89,7 @@ body.loading .modal {
   padding-top: 15px;
 }
 
-#link a{
+#link a, #link p{
   color: #4791D2;
   font-size: 1.5em;
   margin-right: 20px;
