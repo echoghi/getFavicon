@@ -35,8 +35,10 @@ app.use(express.static(__dirname));
 
 app.post('/api/search', function(req, res){
   searchUrl = req.body.url;
+  setTimeout(function(){
   getFavicon();
   res.send({'searchUrl': searchUrl});
+}, 3000);
 });
 
 server.listen(3000, function(){
