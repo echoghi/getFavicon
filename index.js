@@ -12,9 +12,9 @@ setUrl = '',
 searchUrl = '';
 
 function fileSize(filename) {
- var stats = fs.statSync(filename)
- var fileSizeInBytes = stats["size"]
- return fileSizeInBytes
+ var stats = fs.statSync(filename),
+     fileSizeInBytes = stats["size"];
+ return fileSizeInBytes;
 }
 
 app.use(bodyParser.json());
@@ -28,17 +28,15 @@ app.get('/download', function(req, res){
   var file = __dirname + '/img.ico';
   console.log(chalk.green("client is accessing download..."));
   res.download(file);
-  console.log(fileSize(file));
 });
 
 app.use(express.static(__dirname));
 
 app.post('/api/search', function(req, res){
   searchUrl = req.body.url;
-  getFavicon();
-  setTimeout(function(){
+  getFavicon(function(){
   res.send({'searchUrl': searchUrl});
-}, 3000);
+  });
 });
 
 server.listen(3000, function(){
@@ -64,7 +62,7 @@ var download = function(url, filename, callback){
   });
 };
 
-function getFavicon(){
+function getFavicon(callback){
   // Check/Fix URL Formatting
   searchUrl.indexOf('http') !== -1 ? (console.log(chalk.green('HTTP Check Passed')), setUrl = searchUrl) : (setUrl = 'http://www.'+ searchUrl,
   console.log(chalk.green('HTTP(s) error fixed')));
@@ -73,6 +71,7 @@ function getFavicon(){
    if(error) {
     console.log(chalk.red("Request Error:", error));
     searchUrl = 'error';
+    callback();
     return;
   }
   //Parse the <head> for icons
@@ -81,7 +80,7 @@ function getFavicon(){
      var rel = $(this).attr('rel');
      if(rel.toLowerCase() === "icon" || rel.toLowerCase() === "shortcut icon"){
         site = $(this).attr('href');
-       //Check if the favicon file has a proper address format
+       //Check if the favicon file has a proper url format for downloading
        if(site.indexOf('http') !== -1 || site.indexOf('https') !== -1){
          console.log(chalk.green('URL is a valid ICO file'));
        }
@@ -89,15 +88,15 @@ function getFavicon(){
          site = 'http:' + site;
        }
        else{
-         site = setUrl + site;
+         if(site.indexOf('/') === -1){
+          site = setUrl + '/' + site;
+        } else{
+          site = setUrl + site;
+        }
          console.log(chalk.green('ICO path error fixed'));
        }
 
      favicons.push(site);
-
-    if(site !== ''){
-    download(site, 'img.ico', function(){console.log("File downloaded to server")});
-    }
    }
     fs.writeFile('favicon.txt', "Favicon(s) from " + setUrl + ": " + favicons);
    });
@@ -105,9 +104,9 @@ function getFavicon(){
    // If not, set a download address where the main favicon can usually be found
    favicons.length === 0 ? (site = setUrl+'/favicon.ico',favicons.push(site),
    console.log(chalk.green("Retrieved", favicons.length, "favicon(s) from", setUrl)),
-   download(site, 'img.ico', function(){console.log("File downloaded to server")}),
+   download(site, 'img.ico', function(){console.log("File downloaded to server"); callback();}),
    fs.writeFile('favicon.txt', "Favicon(s) from " + setUrl + ": " + favicons),
    favicons = []) : (console.log(chalk.green("Retrieved " + favicons.length + " favicon(s) from " + setUrl)),
-   favicons = []);
+   favicons = [], download(site, 'img.ico', function(){console.log("File downloaded to server"); callback();}));
 });
 }
